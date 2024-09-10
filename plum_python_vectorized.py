@@ -99,7 +99,6 @@ def zhat_vec(M,s_rep,n):
 
     # Take products of F_supp
     degree_vector = np.array(degree_vector)
-    M_inv = np.linalg.inv(M)
     arrays = [ np.array(lst) for lst in F_supp]
     grid = np.meshgrid(*arrays)
     y_arr = np.array([g.ravel() for g in grid]).T
