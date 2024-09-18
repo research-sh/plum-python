@@ -67,27 +67,35 @@ def zhat_vec(M,s_rep,n):
     # Build F_supp, this cannot be vectorized because F_supp is not a regular shape
     F_supp = []
     for i in range(s):
+        values = list()
         if degree_vector[i] == 0:
             if bounding_box[i][0] <= -2 and bounding_box[i][1] >= 2: # I
-                F_supp.append([-2, 0, 2])
+                values = [-2,0,2]
+                #F_supp.append([-2, 0, 2])
             elif bounding_box[i][0] <= -2 and bounding_box[i][1] < 2: # II
-                F_supp.append([-2, 0])
+                values = [-2,0]
+                #F_supp.append([-2, 0])
             elif bounding_box[i][0] > -2 and bounding_box[i][1] >= 2: # III
-                F_supp.append([0, 2])
+                values = [0,2]
+                #F_supp.append([0, 2])
             else:
-                F_supp.append([0])
+                values = [0]
+                #F_supp.append([0])
         elif degree_vector[i] == 1:
             if bounding_box[i][0] <= -1 and bounding_box[i][1] >= 1: # I
-                F_supp.append([-1, 1])
+                values = [-1, 1]
+                #F_supp.append([-1, 1])
             elif bounding_box[i][0] <= -1 and bounding_box[i][1] < 1: # II
-                F_supp.append([-1])
+                values = [-1]
+                #F_supp.append([-1])
             elif bounding_box[i][0] > -1 and bounding_box[i][1] >= 1: # III
-                F_supp.append([1])
+                values = [1]
+                #F_supp.append([1])
         elif degree_vector[i] == 2:
-            F_supp.append([0])
+            values = [0]
+            #F_supp.append([0])
         else:
             r = degree_vector[i]-2
-            values = []
             if bounding_box[i][0] <= -r: 
                 values.append(-r)
                 for j in range(1, int(np.floor((-r-bounding_box[i][0])/2))+1):
@@ -95,18 +103,18 @@ def zhat_vec(M,s_rep,n):
                 values.append(r)
                 for j in range(1, int(np.floor((bounding_box[i][1]-r)/2))+1):
                     values.append(r + 2*j)
-            F_supp.append(values)
+        F_supp.append(np.array(values))
 
     # Take products of F_supp
     degree_vector = np.array(degree_vector)
     M_inv = np.linalg.inv(M)
-    arrays = [ np.array(lst) for lst in F_supp]
-    grid = np.meshgrid(*arrays)
+    #arrays = [ np.array(lst) for lst in F_supp]
+    grid = np.meshgrid(*F_supp)
     y_arr = np.array([g.ravel() for g in grid]).T
 
     # Establish condition
     c_arr = -1*np.einsum("ij,jk,ik->i", y_arr, M_inv, y_arr)/4
-    condition = np.all(np.mod(np.around(1/2 * ((y_arr - s_rep) @ M_inv),4),1) == 0.0,axis=1)
+    condition = np.all(np.mod(np.around(1/2 * ((y_arr - s_rep) @ M_inv),4),1) == 0.0, axis=1)
 
     # Impose condition
     c_arr_c = c_arr[condition]
@@ -120,7 +128,8 @@ def zhat_vec(M,s_rep,n):
     F[:,mask_1] = np.where(y_arr_c[:,mask_1] == 1, -F[:,mask_1], 1)
     mask_g2 = degree_vector > 2
     F[:,mask_g2] = np.where(np.abs(y_arr_c[:,mask_g2]) >= degree_vector[mask_g2]-2, 
-                            F[:,mask_g2]*(1/2)*(np.sign(y_arr_c[:,mask_g2])**degree_vector[mask_g2]) * scipy.special.comb((degree_vector[mask_g2] + abs(y_arr_c[:,mask_g2]))/2 - 2,degree_vector[mask_g2]-3 ),
+                            F[:,mask_g2]*(1/2)*(np.sign(y_arr_c[:,mask_g2])**degree_vector[mask_g2]) *\
+                            scipy.special.comb((degree_vector[mask_g2] + np.abs(y_arr_c[:,mask_g2]))/2 - 2,degree_vector[mask_g2]-3 ),
                             1)
     F = np.prod(F,axis=1)
 
@@ -129,7 +138,6 @@ def zhat_vec(M,s_rep,n):
     c_unique = np.arange(n)
     F_sums = np.bincount(c_arr_floor, weights=F, minlength=n)
     zhat_powers = c_unique + np.ceil(min_level) + normalization_term
-
     # Build zhat_list
     zhat_list = list(zip(F_sums, zhat_powers))
     return zhat_list
